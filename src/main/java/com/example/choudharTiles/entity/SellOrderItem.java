@@ -113,4 +113,14 @@ public class SellOrderItem {
     public SellOrder getSellOrder() {
         return sellOrder;
     }
+
+    public String getOrderDate() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getOrderDate'");
+    }
+
+    public String getDeliveryDate() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getDeliveryDate'");
+    }
 }

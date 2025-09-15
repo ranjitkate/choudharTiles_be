@@ -1,69 +1,36 @@
 package com.example.choudharTiles.service;
 
-import com.example.choudharTiles.entity.Stock;
-import com.example.choudharTiles.entity.Product;
-import com.example.choudharTiles.entity.Category;
-import com.example.choudharTiles.repository.StockRepository;
+import com.example.choudharTiles.entity.PurchaseItem;
+import com.example.choudharTiles.entity.SellOrderItem;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class StockService {
 
-    private final StockRepository stockRepository;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
-    public StockService(StockRepository stockRepository) {
-        this.stockRepository = stockRepository;
+    // ✅ Increase stock after purchase
+    public void increaseStock(PurchaseItem item) {
+        String checkSql = "SELECT COUNT(*) FROM stock WHERE product_id = ? AND size = ?";
+        Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, item.getProduct(), item.getSize());
+
+        if (count != null && count > 0) {
+            // Update existing stock
+            String updateSql = "UPDATE stock SET quantity = quantity + ?, updated_at = now() WHERE product_id = ? AND size = ?";
+            jdbcTemplate.update(updateSql, item.getQuantity(), item.getProduct(), item.getSize());
+        } else {
+            // Insert new stock record
+            String insertSql = "INSERT INTO stock (product_id, size, quantity, category_id) VALUES (?, ?, ?,?)";
+            jdbcTemplate.update(insertSql, item.getProduct(), item.getSize(), item.getQuantity(), item.getCategory());
+        }
     }
 
-    // Add or Update Stock
-    public void addStock(Product product, Category category, String size, String type, int quantity) {
-        Stock stock = stockRepository.findByProductAndSizeAndType(product, size, type)
-                .orElseGet(() -> {
-                    Stock newStock = new Stock();
-                    newStock.setProduct(product);
-                    newStock.setCategory(category);
-                    newStock.setSize(size);
-                    newStock.setType(type);
-                    newStock.setAvailableQuantity(0);
-                    return newStock;
-                });
-
-        stock.setAvailableQuantity(stock.getAvailableQuantity() + quantity);
-        stockRepository.save(stock);
-    }
-
-    // Reduce Stock
-    public void reduceStock(Product product, String size, String type, int quantity) {
-        System.err.println("Reducing stock for product: " + product + ", size: " + size + ", type: " + type
-                + ", quantity: " + quantity);
-        Stock stock = stockRepository.findByProductAndSizeAndType(product, size, type)
-                .orElseThrow(() -> new RuntimeException("No stock found for this product/size/type"));
-
-        // if (stock.getAvailableQuantity() < quantity) {
-        // throw new RuntimeException("Insufficient stock for product: " +
-        // product.getName());
-        // }
-
-        stock.setAvailableQuantity(100 - quantity);
-        stockRepository.save(stock);
-    }
-
-    // Reporting Queries
-    public List<Stock> getStockByCategory(Category category) {
-        return stockRepository.findByCategory(category);
-    }
-
-    public List<Stock> getStockByProduct(Product product) {
-        return stockRepository.findByProduct(product);
-    }
-
-    public List<Stock> getStockBySize(String size) {
-        return stockRepository.findBySize(size);
-    }
-
-    public List<Stock> getStockByType(String type) {
-        return stockRepository.findByType(type);
+    // ✅ Decrease stock after sell
+    public void decreaseStock(SellOrderItem item) {
+        String updateSql = "UPDATE stock SET quantity = quantity - ?, updated_at = now() WHERE product_id = ? AND size = ?";
+        jdbcTemplate.update(updateSql, item.getQuantity(), item.getProduct(), item.getSize());
     }
 }

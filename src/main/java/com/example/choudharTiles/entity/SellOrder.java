@@ -33,6 +33,10 @@ public class SellOrder {
         }
     }
 
+    public List<SellOrderItem> getItems() {
+        return items;
+    }
+
     // getters & setters
 
     public Long getId() {

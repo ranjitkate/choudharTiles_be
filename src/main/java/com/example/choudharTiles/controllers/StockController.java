@@ -1,56 +1,38 @@
 package com.example.choudharTiles.controllers;
 
-import com.example.choudharTiles.entity.Stock;
-import com.example.choudharTiles.entity.Product;
-import com.example.choudharTiles.entity.Category;
-import com.example.choudharTiles.repository.ProductRepository;
-import com.example.choudharTiles.repository.CategoryRepository;
-import com.example.choudharTiles.service.StockService;
+import com.example.choudharTiles.bean.StockBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/stock")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*") // allow Angular frontend
 public class StockController {
 
-    private final StockService stockService;
-    private final ProductRepository productRepository;
-    private final CategoryRepository categoryRepository;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
-    public StockController(StockService stockService, ProductRepository productRepository,
-            CategoryRepository categoryRepository) {
-        this.stockService = stockService;
-        this.productRepository = productRepository;
-        this.categoryRepository = categoryRepository;
+    // 🔹 Get all stock records
+    @GetMapping
+    public List<StockBean> getAllStock() {
+        String sql = "SELECT s.id, stock_code AS stockCode, p.name AS productId, p.size, quantity, s.type, " +
+                "c.name AS categoryId, weight, created_at AS createdAt, updated_at AS updatedAt " +
+                "FROM stock s join products p on s.product_id = p.id join categories c on s.category_id = c.id ORDER BY id DESC";
+
+        return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(StockBean.class));
     }
 
-    // ✅ Get stock by product
-    @GetMapping("/product/{productId}")
-    public List<Stock> getStockByProduct(@PathVariable Long productId) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
-        return stockService.getStockByProduct(product);
-    }
+    // 🔹 Get stock by ID
+    @GetMapping("/{id}")
+    public StockBean getStockById(@PathVariable Long id) {
+        String sql = "SELECT s.id, stock_code AS stockCode, p.name AS productId, p.size, quantity, s.type, " +
+                "c.name AS categoryId, weight, created_at AS createdAt, updated_at AS updatedAt" +
+                "FROM stock s join products p on s.product_id = p.id join categories c on s.category_id = c.id WHERE p.id = ?";
 
-    // ✅ Get stock by category
-    @GetMapping("/category/{categoryId}")
-    public List<Stock> getStockByCategory(@PathVariable Long categoryId) {
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
-        return stockService.getStockByCategory(category);
-    }
-
-    // ✅ Get stock by size
-    @GetMapping("/size/{size}")
-    public List<Stock> getStockBySize(@PathVariable String size) {
-        return stockService.getStockBySize(size);
-    }
-
-    // ✅ Get stock by type
-    @GetMapping("/type/{type}")
-    public List<Stock> getStockByType(@PathVariable String type) {
-        return stockService.getStockByType(type);
+        return jdbcTemplate.queryForObject(sql, new BeanPropertyRowMapper<>(StockBean.class), id);
     }
 }
